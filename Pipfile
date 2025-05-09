@@ -1,0 +1,29 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+fastapi = "*"
+uvicorn = "*"
+langchain = "*"
+langchain-community = "*"
+langchain-ollama = "*"
+python-dotenv = "*"
+langgraph = "*"
+ipython = "*"
+faiss-cpu = "*"
+motor = "*"
+pymongo = "*"
+python-multipart = "*"
+tavily-python = "*"
+beautifulsoup4 = "*"
+dnspython = "*"
+pytz = "*"
+tweepy = "*"
+pydantic = {extras = ["email"], version = "*"}
+
+[dev-packages]
+
+[requires]
+python_version = "3.11"

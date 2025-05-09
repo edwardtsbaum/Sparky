@@ -1,0 +1,64 @@
+services:
+
+  ollama:
+    image: ollama/ollama
+    container_name: edd_llama32
+    ports:
+      - "11436:11436"
+    environment:
+      - OLLAMA_HOST=:11436
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - edd-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, utility, compute]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:11436/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s  # Increased to 2 minutes to allow for model loading
+
+  edd:
+    build:
+       context: .
+       dockerfile: Dockerfile
+    container_name: edd
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      - ollama
+    networks:
+      - edd-network
+    environment:
+      - INDICES_DIR=/app/data/indices
+      - OLLAMA_BASE_URL=http://ollama:11436
+      - PYTHONPATH=/app
+      - USER_AGENT=Edd
+    volumes:
+      - .:/app
+      - vector_store_data:/app/data/indices  # Persistent volume for FAISS indices
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  edd-network:
+    driver: bridge
+
+volumes:
+  ollama_data:
+  vector_store_data:
+    name: edd_memory
