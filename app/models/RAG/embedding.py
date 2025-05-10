@@ -14,8 +14,9 @@ class EmbeddingModel:
             model=Edd.local_llm,  # or your chosen model
             base_url="http://ollama:11436"  # adjust based on your setup
         )
-        self.expected_dim = 3072  # Expected embedding dimension
+        #self.expected_dim = 3072  # Expected embedding dimension
         #self.expected_dim = 1536 #deepseek-r1:1.5b
+        self.expected_dim = 4092  #qwen3 8b
 
     def embed_query(self, text: str | list) -> list:
         """Wrapper for embed_query with validation"""

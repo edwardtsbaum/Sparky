@@ -22,12 +22,12 @@ RUN mkdir -p /app/vector_store
 # Copy the current directory contents into the container at /app
 COPY . /app
 
-# Make port 8002 available
-EXPOSE 8002
+# Make port 8000 available
+EXPOSE 8000
 
 # Set Python path
 ENV PYTHONPATH=/app
-ENV USER_AGENT="Edd"
+ENV USER_AGENT="Ed"
 
 # Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

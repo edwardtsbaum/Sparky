@@ -2,7 +2,7 @@ services:
 
   ollama:
     image: ollama/ollama
-    container_name: edd_llama32
+    container_name: ed_llm
     ports:
       - "11436:11436"
     environment:
@@ -11,7 +11,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     networks:
-      - edd-network
+      - ed-network
     deploy:
       resources:
         reservations:
@@ -26,23 +26,23 @@ services:
       retries: 5
       start_period: 120s  # Increased to 2 minutes to allow for model loading
 
-  edd:
+  ed:
     build:
        context: .
        dockerfile: Dockerfile
-    container_name: edd
+    container_name: ed
     command: uvicorn main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
     depends_on:
       - ollama
     networks:
-      - edd-network
+      - ed-network
     environment:
       - INDICES_DIR=/app/data/indices
       - OLLAMA_BASE_URL=http://ollama:11436
       - PYTHONPATH=/app
-      - USER_AGENT=Edd
+      - USER_AGENT=Ed
     volumes:
       - .:/app
       - vector_store_data:/app/data/indices  # Persistent volume for FAISS indices
@@ -55,10 +55,10 @@ services:
       start_period: 40s
 
 networks:
-  edd-network:
+  ed-network:
     driver: bridge
 
 volumes:
   ollama_data:
   vector_store_data:
-    name: edd_memory
+    name: ed_memory

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 class EddLLM:
     def __init__(self):
         self.llm, self.llm_json_mode = self.create_llm()
-        self.local_llm = "llama3.2:latest"
+        self.local_llm = "qwen3:8b"
         self.ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://ollama:11436")
 
     def create_llm(self):
@@ -16,7 +16,7 @@ class EddLLM:
         #lets run this model on a different port than 11434
         llama_base_url = os.getenv("OLLAMA_BASE_URL", "http://ollama:11436")  # Changed port to 11435
 
-        local_llm = "llama3.2:latest"
+        local_llm = "qwen3:8b"
 
         #llm = ChatOllama(model=local_llm, temperature=0)
 
