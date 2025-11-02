@@ -19,7 +19,7 @@ uri = f"mongodb+srv://{escaped_username}:{escaped_password}@{mongoHost}/"
 #'27017' is the default port for mongodb
 #client = motor.motor_asyncio.AsyncIOMotorClient('mongodb://localhost:27017')
 client = motor.motor_asyncio.AsyncIOMotorClient(uri)
-database = client.Ed
+database = client.Sparky
 
 #collection is a table in sql
 conversation_state = database.conversation_memory
