@@ -294,8 +294,8 @@ async def chat_with_tools(request: ChatRequest):
         final_state = None
         
         # Stream through tool graph
-        async for event in tool_graph.astream(initial_state):
-            logger.info(f"=== TOOL EVENT: {event.keys() if event else 'No event'} ===")
+        async for event in tool_graph.astream(initial_state, stream_mode="values"):
+            logger.info(f"=== TOOL EVENT: {event} ===")
             final_state = event
             
         if not final_state:

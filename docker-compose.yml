@@ -19,12 +19,6 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu, utility, compute]
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:11436/api/tags"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 120s  # Increased to 2 minutes to allow for model loading
 
   ed:
     build:
@@ -45,12 +39,6 @@ services:
     volumes:
       - .:/app
       - ./data:/app/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
 networks:
   ed-network:

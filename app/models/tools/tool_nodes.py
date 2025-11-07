@@ -7,8 +7,8 @@ from ...Edd.llm import Edd
 logger = logging.getLogger(__name__)
 
 # API endpoints
-EMAIL_API_URL = "http://192.168.0.180:8007/api/write_and_send_email"
-SEARCH_API_URL = "http://192.168.0.131:8006/api/web-search"
+EMAIL_API_URL = "http://100.81.249.32:8007/api/write_and_send_email_async"
+SEARCH_API_URL = "http://100.83.178.43:8006/api/web-search-email"
 
 class ToolNodes:
     """Node implementations for tool-calling agent"""
@@ -107,34 +107,53 @@ For search tool, use this format:
             
             logger.info(f"Sending email to: {recipient}")
             logger.info(f"Assignment: {assignment}")
+            #logger.info(f"Email API URL: {EMAIL_API_URL}")
             
+            # Prepare request payload
+            request_payload = {
+                "recipient": recipient,
+                "assignment": assignment
+            }
+            logger.info(f"Request payload: {json.dumps(request_payload)}")
+            
+            logger.info("Creating HTTP client with 30s timeout...")
             async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    EMAIL_API_URL,
-                    json={
-                        "recipient": recipient,
-                        "assignment": assignment
-                    }
-                )
-                
-                status_code = response.status_code
-                logger.info(f"Email API response status: {status_code}")
+                logger.info("HTTP client created, sending POST request...")
+                logger.info(f"POST {EMAIL_API_URL}")
                 
                 try:
-                    response_data = response.json()
-                except:
-                    response_data = {"raw_response": response.text}
-                
-                logger.info(f"Email API response: {response_data}")
-                
-                return {
-                    **state,
-                    "tool_response": response_data,
-                    "status_code": status_code
-                }
-                
+                    response = await client.post(
+                        EMAIL_API_URL,
+                        json=request_payload
+                    )
+                    
+                    logger.info(f"✓ Response received!")
+                    status_code = response.status_code
+                    logger.info(f"Email API response status: {status_code}")
+                    logger.info(f"Response headers: {dict(response.headers)}")
+                    
+                    try:
+                        response_data = response.json()
+                        logger.info(f"Response JSON parsed successfully")
+                    except Exception as json_error:
+                        logger.warning(f"Failed to parse JSON response: {json_error}")
+                        response_data = {"raw_response": response.text}
+                    
+                    logger.info(f"Email API response data: {json.dumps(response_data, indent=2)[:500]}...")
+                    
+                    return {
+                        **state,
+                        "tool_response": response_data,
+                        "status_code": status_code
+                    }
+                    
+                except httpx.TimeoutException as timeout_error:
+                    logger.error(f"✗ Request timed out after 30 seconds")
+                    logger.error(f"Timeout details: {timeout_error}")
+                    raise
+                    
         except httpx.TimeoutException:
-            logger.error("Email API timeout")
+            logger.error("Email API timeout - no response within 30 seconds")
             return {
                 **state,
                 "tool_response": {"error": "Email API request timed out"},
@@ -142,6 +161,7 @@ For search tool, use this format:
             }
         except httpx.ConnectError as e:
             logger.error(f"Email API connection error: {e}")
+            logger.error(f"Failed to connect to: {EMAIL_API_URL}")
             return {
                 **state,
                 "tool_response": {"error": f"Could not connect to email API: {str(e)}"},
@@ -149,6 +169,9 @@ For search tool, use this format:
             }
         except Exception as e:
             logger.error(f"Error calling email API: {str(e)}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return {
                 **state,
                 "tool_response": {"error": str(e)},
@@ -167,33 +190,54 @@ For search tool, use this format:
             subject = tool_params.get("subject", "")
             
             logger.info(f"Searching for: {subject}")
+            #logger.info(f"Search API URL: {SEARCH_API_URL}")
             
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    SEARCH_API_URL,
-                    json={
-                        "subject": subject
-                    }
-                )
-                
-                status_code = response.status_code
-                logger.info(f"Search API response status: {status_code}")
+            # Prepare request payload
+            request_payload = {"subject": subject}
+            logger.info(f"Request payload: {json.dumps(request_payload)}")
+            
+            logger.info("Creating HTTP client with 10s timeout (fire-and-forget pattern)...")
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                logger.info("HTTP client created, sending POST request...")
+                logger.info(f"POST {SEARCH_API_URL}")
                 
                 try:
-                    response_data = response.json()
-                except:
-                    response_data = {"raw_response": response.text}
-                
-                logger.info(f"Search API response: {response_data}")
-                
-                return {
-                    **state,
-                    "tool_response": response_data,
-                    "status_code": status_code
-                }
-                
+                    response = await client.post(
+                        SEARCH_API_URL,
+                        json=request_payload
+                    )
+                    
+                    logger.info(f"✓ Response received!")
+                    status_code = response.status_code
+                    logger.info(f"Search API response status: {status_code}")
+                    logger.info(f"Response headers: {dict(response.headers)}")
+                    
+                    try:
+                        response_data = response.json()
+                        logger.info(f"Response JSON parsed successfully")
+                    except Exception as json_error:
+                        logger.warning(f"Failed to parse JSON response: {json_error}")
+                        response_data = {"raw_response": response.text}
+                    
+                    logger.info(f"Search API response data: {json.dumps(response_data, indent=2)[:500]}...")
+                    
+                    # Handle 202 Accepted (async search started)
+                    if status_code == 202:
+                        logger.info("Search accepted - will process asynchronously")
+                    
+                    return {
+                        **state,
+                        "tool_response": response_data,
+                        "status_code": status_code
+                    }
+                    
+                except httpx.TimeoutException as timeout_error:
+                    logger.error(f"✗ Request timed out after 10 seconds")
+                    logger.error(f"Timeout details: {timeout_error}")
+                    raise
+                    
         except httpx.TimeoutException:
-            logger.error("Search API timeout")
+            logger.error("Search API timeout - no response within 10 seconds")
             return {
                 **state,
                 "tool_response": {"error": "Search API request timed out"},
@@ -201,6 +245,7 @@ For search tool, use this format:
             }
         except httpx.ConnectError as e:
             logger.error(f"Search API connection error: {e}")
+            logger.error(f"Failed to connect to: {SEARCH_API_URL}")
             return {
                 **state,
                 "tool_response": {"error": f"Could not connect to search API: {str(e)}"},
@@ -208,6 +253,9 @@ For search tool, use this format:
             }
         except Exception as e:
             logger.error(f"Error calling search API: {str(e)}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return {
                 **state,
                 "tool_response": {"error": str(e)},
@@ -229,7 +277,7 @@ For search tool, use this format:
             logger.info(f"Formatting response for tool: {tool_name}, status: {status_code}")
             
             if status_code == 200:
-                # Success messages
+                # Success - immediate results
                 if tool_name == "email":
                     final_message = f"✓ Email sent successfully!\n\nDetails: {json.dumps(tool_response, indent=2)}"
                 elif tool_name == "search":
@@ -241,6 +289,17 @@ For search tool, use this format:
                         final_message = f"✓ Web search completed successfully!\n\n{tool_response}"
                 else:
                     final_message = f"✓ Tool '{tool_name}' completed successfully!"
+                    
+            elif status_code == 202:
+                # Accepted - async processing
+                if tool_name == "email":
+                    final_message = "✓ Email request accepted!\n\nYour email is being processed. You'll be notified when it's sent."
+                elif tool_name == "search":
+                    message = tool_response.get("message", "Your search is being processed")
+                    final_message = f"✓ Search request accepted!\n\n{message}\n\nResults will be delivered when ready."
+                else:
+                    final_message = "✓ Request accepted!\n\nYour request is being processed in the background."
+                    
             else:
                 # Error messages
                 error_details = tool_response.get("error", json.dumps(tool_response))
