@@ -39,13 +39,11 @@ services:
     networks:
       - ed-network
     environment:
-      - INDICES_DIR=/app/data/indices
       - OLLAMA_BASE_URL=http://ollama:11436
       - PYTHONPATH=/app
       - USER_AGENT=Ed
     volumes:
       - .:/app
-      - vector_store_data:/app/data/indices  # Persistent volume for FAISS indices
       - ./data:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -60,5 +58,3 @@ networks:
 
 volumes:
   ollama_data:
-  vector_store_data:
-    name: ed_memory

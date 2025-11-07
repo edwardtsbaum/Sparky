@@ -4,8 +4,6 @@ from app.endpoints.chat import router as chat_router
 from app.endpoints.memory import router as memory_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.models.memory.conversation_buffer import conversation_buffer
-from app.endpoints.twitter import router as twitter_router
-from app.endpoints.emailer import router as emailer_router
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,7 +37,6 @@ app.add_middleware(
 
 app.include_router(chat_router)
 app.include_router(memory_router)
-app.include_router(twitter_router)
-app.include_router(emailer_router)
+
 
 

@@ -1,7 +1,5 @@
-from pydantic import BaseModel, Field, EmailStr
-from typing import Optional, List, Dict
-
-
+from pydantic import BaseModel, Field
+from typing import Optional, List
 
 class ChatMessage(BaseModel):
     content: str
@@ -15,17 +13,5 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
 
-class ChatQuery(BaseModel):
-    query: str
 
-class AgentPayload(BaseModel):
-    content: str
-    categories: List[str]
-    analysis: Dict
-    timestamp: str
-    source: str
 
-class EmailRequest(BaseModel):
-    recipient: EmailStr
-    subject: str
-    body: str
