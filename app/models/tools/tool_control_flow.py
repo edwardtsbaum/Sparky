@@ -26,6 +26,7 @@ workflow = StateGraph(ToolState)
 workflow.add_node("select_tool", tool_nodes.select_tool)
 workflow.add_node("call_email_api", tool_nodes.call_email_api)
 workflow.add_node("call_search_api", tool_nodes.call_search_api)
+workflow.add_node("call_twitter_api", tool_nodes.call_twitter_api)
 workflow.add_node("format_response", tool_nodes.format_response)
 
 # Set entry point
@@ -41,6 +42,8 @@ def route_to_tool(state: Dict[str, Any]) -> str:
         return "call_email_api"
     elif tool_name == "search":
         return "call_search_api"
+    elif tool_name == "twitter":
+        return "call_twitter_api"
     else:
         # No tool needed, go straight to format_response
         return "format_response"
@@ -51,6 +54,7 @@ workflow.add_conditional_edges(
     {
         "call_email_api": "call_email_api",
         "call_search_api": "call_search_api",
+        "call_twitter_api": "call_twitter_api",
         "format_response": "format_response"
     }
 )
@@ -58,6 +62,7 @@ workflow.add_conditional_edges(
 # Add edges from tool nodes to format_response
 workflow.add_edge("call_email_api", "format_response")
 workflow.add_edge("call_search_api", "format_response")
+workflow.add_edge("call_twitter_api", "format_response")
 
 # Add edge from format_response to END
 workflow.add_edge("format_response", END)

@@ -10,6 +10,7 @@ dotenv.load_dotenv()
 # API endpoints are set in the .env file
 EMAIL_API_URL = os.getenv("EMAIL_API_URL")
 SEARCH_API_URL = os.getenv("SEARCH_API_URL")
+TWITTER_API_URL = os.getenv("TWITTER_API_URL")
 
 logger = logging.getLogger(__name__)
 
@@ -31,15 +32,16 @@ class ToolNodes:
 Respond with JSON only.
 
 Tools available:
-- email: Send email (requires: recipient email address, assignment description of what the email should be about)
+- email: Send email (requires: recipient email address, assignment description of what the email should be about. Include the recipient's name in the assignment if provided in the request)
 - search: Web search (requires: subject/query to search for)
+- twitter: Generate and post tweet (requires: subject/topic for the tweet)
 - none: No tool needed
 
 User message: {user_message}
 
 Return ONLY valid JSON in this exact format (no additional text):
 {{
-  "tool_name": "email|search|none",
+  "tool_name": "email|search|twitter|none",
   "tool_params": {{
     "recipient": "email@example.com",
     "assignment": "description"
@@ -52,6 +54,15 @@ For search tool, use this format:
   "tool_name": "search",
   "tool_params": {{
     "subject": "query here"
+  }},
+  "reasoning": "brief explanation"
+}}
+
+For twitter tool, use this format:
+{{
+  "tool_name": "twitter",
+  "tool_params": {{
+    "subject": "topic for tweet"
   }},
   "reasoning": "brief explanation"
 }}
@@ -266,6 +277,90 @@ For search tool, use this format:
                 "status_code": 0
             }
     
+    async def call_twitter_api(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Call Twitter API to generate and post tweet
+        Returns updated state with tool_response and status_code
+        """
+        try:
+            logger.info("=== CALL TWITTER API NODE ===")
+            tool_params = state.get("tool_params", {})
+            
+            subject = tool_params.get("subject", "")
+            
+            logger.info(f"Generating tweet about: {subject}")
+            logger.info(f"Twitter API URL: {TWITTER_API_URL}")
+            
+            # Prepare request payload
+            request_payload = {"subject": subject}
+            logger.info(f"Request payload: {json.dumps(request_payload)}")
+            
+            logger.info("Creating HTTP client with 10s timeout (fire-and-forget pattern)...")
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                logger.info("HTTP client created, sending POST request...")
+                logger.info(f"POST {TWITTER_API_URL}")
+                
+                try:
+                    response = await client.post(
+                        TWITTER_API_URL,
+                        json=request_payload
+                    )
+                    
+                    logger.info(f"✓ Response received!")
+                    status_code = response.status_code
+                    logger.info(f"Twitter API response status: {status_code}")
+                    logger.info(f"Response headers: {dict(response.headers)}")
+                    
+                    try:
+                        response_data = response.json()
+                        logger.info(f"Response JSON parsed successfully")
+                    except Exception as json_error:
+                        logger.warning(f"Failed to parse JSON response: {json_error}")
+                        response_data = {"raw_response": response.text}
+                    
+                    logger.info(f"Twitter API response data: {json.dumps(response_data, indent=2)[:500]}...")
+                    
+                    # Handle 202 Accepted (async tweet generation)
+                    if status_code == 202:
+                        logger.info("Tweet generation accepted - will process asynchronously")
+                    
+                    return {
+                        **state,
+                        "tool_response": response_data,
+                        "status_code": status_code
+                    }
+                    
+                except httpx.TimeoutException as timeout_error:
+                    logger.error(f"✗ Request timed out after 10 seconds")
+                    logger.error(f"Timeout details: {timeout_error}")
+                    raise
+                    
+        except httpx.TimeoutException:
+            logger.error("Twitter API timeout - no response within 10 seconds")
+            return {
+                **state,
+                "tool_response": {"error": "Twitter API request timed out"},
+                "status_code": 0
+            }
+        except httpx.ConnectError as e:
+            logger.error(f"Twitter API connection error: {e}")
+            logger.error(f"Failed to connect to: {TWITTER_API_URL}")
+            return {
+                **state,
+                "tool_response": {"error": f"Could not connect to Twitter API: {str(e)}"},
+                "status_code": 0
+            }
+        except Exception as e:
+            logger.error(f"Error calling Twitter API: {str(e)}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return {
+                **state,
+                "tool_response": {"error": str(e)},
+                "status_code": 0
+            }
+    
     async def format_response(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """
         Format final response message based on tool execution results
@@ -291,6 +386,12 @@ For search tool, use this format:
                         final_message = f"✓ Web search completed successfully!\n\nResults:\n{json.dumps(results, indent=2)}"
                     else:
                         final_message = f"✓ Web search completed successfully!\n\n{tool_response}"
+                elif tool_name == "twitter":
+                    if isinstance(tool_response, dict):
+                        tweet_content = tool_response.get("tweet", tool_response)
+                        final_message = f"✓ Tweet posted successfully!\n\nTweet:\n{json.dumps(tweet_content, indent=2)}"
+                    else:
+                        final_message = f"✓ Tweet posted successfully!\n\n{tool_response}"
                 else:
                     final_message = f"✓ Tool '{tool_name}' completed successfully!"
                     
@@ -301,6 +402,9 @@ For search tool, use this format:
                 elif tool_name == "search":
                     message = tool_response.get("message", "Your search is being processed")
                     final_message = f"✓ Search request accepted!\n\n{message}\n\nResults will be delivered when ready."
+                elif tool_name == "twitter":
+                    message = tool_response.get("message", "Your tweet is being generated")
+                    final_message = f"✓ Tweet request accepted!\n\n{message}\n\nYour tweet will be posted when ready."
                 else:
                     final_message = "✓ Request accepted!\n\nYour request is being processed in the background."
                     
@@ -311,6 +415,8 @@ For search tool, use this format:
                     final_message = f"✗ Email sending failed (Status: {status_code})\n\nError: {error_details}"
                 elif tool_name == "search":
                     final_message = f"✗ Web search failed (Status: {status_code})\n\nError: {error_details}"
+                elif tool_name == "twitter":
+                    final_message = f"✗ Tweet posting failed (Status: {status_code})\n\nError: {error_details}"
                 else:
                     final_message = f"✗ Tool '{tool_name}' failed (Status: {status_code})\n\nError: {error_details}"
             
