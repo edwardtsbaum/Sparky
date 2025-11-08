@@ -3,12 +3,16 @@ import httpx
 import json
 from typing import Dict, Any
 from ...Edd.llm import Edd
+import dotenv
+import os
+
+dotenv.load_dotenv()
+# API endpoints are set in the .env file
+EMAIL_API_URL = os.getenv("EMAIL_API_URL")
+SEARCH_API_URL = os.getenv("SEARCH_API_URL")
 
 logger = logging.getLogger(__name__)
 
-# API endpoints
-EMAIL_API_URL = "http://100.81.249.32:8007/api/write_and_send_email_async"
-SEARCH_API_URL = "http://100.83.178.43:8006/api/web-search-email"
 
 class ToolNodes:
     """Node implementations for tool-calling agent"""
