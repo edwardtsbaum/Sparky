@@ -1,4 +1,4 @@
-# Ed - AI Orchestrating Agent
+# Agent Ed - AI Orchestrating Agent
 
 Ed is an intelligent orchestrating agent that routes tasks to specialized agents through standardized APIs. It uses LLM-powered decision-making to analyze user requests and delegate them to the appropriate tools/agents.
 
